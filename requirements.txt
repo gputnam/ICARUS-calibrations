@@ -1,0 +1,16 @@
+setuptools>=42
+cffi
+jupyterlab
+numpy
+uproot
+matplotlib
+scipy
+pandas
+nbstripout
+tqdm
+ipywidgets
+dill
+h5py
+tables
+emcee
+corner
