@@ -100,5 +100,5 @@ wcwidth==0.2.5
 webencodings==0.5.1
 websocket-client==1.4.2
 widgetsnbextension==4.0.4
-xrootd @ file:///icarus/app/users/gputnam/ICARUS-calibrations/xrootd-5.5.1/xrootdbuild/bindings/python
+xrootd @ file:///exp/icarus/app/users/gputnam/ICARUS-calibrations/xrootd-5.5.1/xrootdbuild/bindings/python
 zipp==3.11.0
