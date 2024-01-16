@@ -43,7 +43,6 @@ jupyterlab-pygments==0.2.2
 jupyterlab-server==2.16.3
 jupyterlab-widgets==3.0.4
 kiwisolver==1.4.4
-landau==0.1
 MarkupSafe==2.1.1
 matplotlib==3.6.2
 matplotlib-inline==0.1.6
