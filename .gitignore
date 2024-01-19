@@ -2,3 +2,5 @@
 /plots*
 *.pyc
 /.ipynb_checkpoints/
+xrootd-5.5.1/
+*.swp

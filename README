@@ -1,12 +1,8 @@
 First time setup (on FNAL servers):
-. setup.sh
-python -m venv env
-. env/bin/activate
-pip install -r requirements.txt
+. init.sh
 
 Environment setup (after first time):
 . setup.sh
-. env/bin/activate
 
 Instructions for Drift Time Plots / Data:
 
