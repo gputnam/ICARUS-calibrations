@@ -23,3 +23,4 @@ make install -j 16
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/lib64
 cd bindings/python
 python setup.py install --prefix=$VIRTUAL_ENV
+cd ../../../..
