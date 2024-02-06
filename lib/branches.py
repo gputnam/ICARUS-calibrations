@@ -20,6 +20,7 @@ trkbranches = [
     "hit_max_time_p2_tpcE",
     "hit_min_time_p2_tpcW",
     "hit_max_time_p2_tpcW",
+    "length",
     "selected",
     "cryostat",
 
