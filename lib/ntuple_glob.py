@@ -9,6 +9,7 @@ import os
 from . import names
 import dill
 import sys
+import awkward as ak
 
 CPU_COUNT = multiprocessing.cpu_count()
 
@@ -38,7 +39,7 @@ class NTupleProc(object):
 
 
 def _makedf(dfs):
-    if not isinstance(dfs, tuple):
+    if not isinstance(dfs, list):
         assert(isinstance(dfs, pd.DataFrame))
         dfs = [dfs]
     else:
@@ -61,7 +62,7 @@ def _makedf(dfs):
     return dfs
         
 def _loaddf(inp):
-    fname, branches, index, applyf = inp
+    fname, branches, index, applyf, concat = inp
     # Convert pnfs to xroot URL's
     if fname.startswith("/pnfs") and "scratch" not in fname:
         fname = fname.replace("/pnfs", "root://fndca1.fnal.gov:1094/pnfs/fnal.gov/usr")
@@ -75,8 +76,8 @@ def _loaddf(inp):
         return None
     with f:
         try:
-            dfW = f[names.folderW][names.tname].arrays(branches, library="pd")
-            dfE = f[names.folderE][names.tname].arrays(branches, library="pd")
+            dfW = ak.to_dataframe(f[names.folderW][names.tname].arrays(branches, library="ak"), how=concat)
+            dfE = ak.to_dataframe(f[names.folderE][names.tname].arrays(branches, library="ak"), how=concat)
         except Exception as e:
             print("Could not open file (%s) due to exception. Skipping..." % fname)
             print(e)
@@ -109,7 +110,7 @@ def _loaddf(inp):
             return dfW
 
         try:
-            dfW = dfW.append(dfE)
+            dfW = pd.concat([dfW, dfE])
         except:
             print(dfE)
             print(dfW)
@@ -178,7 +179,7 @@ class NTupleGlob(object):
             self.glob = glob.glob(g)
         self.branches = branches
 
-    def dataframe(self, branches=None, maxfile=None, nproc=1, f=None, savemeta=False):
+    def dataframe(self, branches=None, maxfile=None, nproc=1, f=None, savemeta=False, concat=None):
         if branches is None:
             branches = self.branches
 
@@ -191,7 +192,7 @@ class NTupleGlob(object):
 
         ret = []
         with Pool(processes=nproc) as pool:
-            thisglob = [(g, branches, i*2, f) for i,g in enumerate(thisglob)]
+            thisglob = [(g, branches, i*2, f, concat) for i,g in enumerate(thisglob)]
             for i, df in enumerate(tqdm(pool.imap_unordered(_loaddf, thisglob), total=len(thisglob), unit="file", delay=5, smoothing=0.6)):
                 # print(i, flush=True)
                 if df is not None:

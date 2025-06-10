@@ -39,10 +39,7 @@ def reduce_df(df, truedf=None):
     if len(df) == 0: # Ignore empty df's 
         return None
 
-    # select_track = ((df.selected == 1) | (df.selected == 2)) & (df.whicht0 == 0)
-
-    # Select anode + cathode crossing tracks
-    select_track = (df.selected == 1) & (df.length > 25) # & (df.whicht0 == 0)
+    select_track = (df.selected == 1) & (df.length > 25) & ~np.isnan(df.t0PFP)
 
     hits = df["hits%i" % PLANE]
     
@@ -118,7 +115,7 @@ def reduce_df(df, truedf=None):
     outdf["tpcW"] = (~outdf.tpcE) & (df.groupby(["entry", "chunk"]).tpcE.nunique() == 1)
 
     # Save T0
-    outdf["pandora_t0"] = df.groupby(["entry", "chunk"]).t0.first()
+    outdf["pandora_t0"] = df.groupby(["entry", "chunk"]).t0PFP.first()
     outdf["hit_max_time_p2_tpcE"] = df.groupby(["entry", "chunk"]).hit_max_time_p2_tpcE.first()
     outdf["hit_max_time_p2_tpcW"] = df.groupby(["entry", "chunk"]).hit_max_time_p2_tpcW.first()
 
@@ -134,12 +131,12 @@ def reduce_df(df, truedf=None):
 
 
 def main(output, inputs):
-    b = branches.trkbranches + plane2branches
+    b = plane2branches + branches.trkbranches
     if SAVEMC:
         b += truehitbranches
 
     ntuples = NTupleGlob(inputs, b)
-    df = ntuples.dataframe(nproc="auto", f=reduce_df)
+    df = ntuples.dataframe(nproc="auto", f=reduce_df, concat="left")
     df.to_hdf(output, key="df", mode="w")
 
 if __name__ == "__main__":

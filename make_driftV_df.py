@@ -86,8 +86,8 @@ def reduce_df(df):
     return outdf
 
 def main(output, inputs):
-    ntuples = NTupleGlob(inputs, branches.trkbranches + plane2branches)
-    df = ntuples.dataframe(nproc="auto", f=reduce_df, savemeta=True)
+    ntuples = NTupleGlob(inputs, plane2branches + branches.trkbranches)
+    df = ntuples.dataframe(nproc="auto", f=reduce_df, savemeta=True, concat="left")
     df.to_hdf(output, key="df", mode="w")
 
 if __name__ == "__main__":

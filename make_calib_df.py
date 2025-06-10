@@ -15,6 +15,7 @@ from lib.constants import *
 
 PLANE = 2
 SPNAME = "sp"
+SAVEMC = False
 
 plane2branches = [
     "h.time", "h.width", "h.tpc", "h.channel", "h.wire", "dqdx", "pitch", "rr", "dir.x", "dir.y", "dir.z",
@@ -24,12 +25,6 @@ plane2branches = [
     "h.%s.x" % SPNAME, "h.%s.y" % SPNAME, "h.%s.z" % SPNAME,
 ]
 plane2branches = ["hits%i.%s" % (PLANE, s) for s in plane2branches]
-
-ray_branches = [
-    "daughter_nsp",
-    "daughter_pdg",
-    "daughter_sp_toend_dist"
-]
 
 truebranches = [
   "truth.michel.genE",
@@ -64,16 +59,16 @@ def reduce_df(df, raydf=None, truehdf=None, othrdf=None):
         return None
 
     # Select stopping tracks
-    select_track = (df.selected == 0) & (df.length > 50)
+    select_track = (df.selected == 0) & (df.length > 50) & (~np.isnan(df.t0PFP) | ~np.isnan(df.t0CRTHit))
 
     hitname = "hits%i" % PLANE
 
     df["tpcE"] = isTPCE(df[hitname].h)
 
-    df["true_end_dist"] = dist(df.end, df.truth.p.end)
-
-    df["true_pdg"] = df.truth.p.pdg
-    df["true_wallin"] = df.truth.p.wallin
+    if SAVEMC:
+        df["true_end_dist"] = dist(df.end, df.truth.p.end)
+        df["true_pdg"] = df.truth.p.pdg
+        df["true_wallin"] = df.truth.p.wallin
 
     # df[("whicht0", "", "", "")] = -1
 
@@ -83,9 +78,6 @@ def reduce_df(df, raydf=None, truehdf=None, othrdf=None):
                     ("tpcE", "", "", ""),
                     (hitname, "h", "channel", ""),
                     (hitname, "h", "wire", ""),
-                    ("true_pdg", "", "", ""),
-                    ("true_wallin", "", "", ""),
-                    ("true_end_dist", "", "", ""),
                     (hitname, "dqdx", "", ""),
                     (hitname, "pitch", "", ""),
                     (hitname, "rr", "", ""),
@@ -101,27 +93,31 @@ def reduce_df(df, raydf=None, truehdf=None, othrdf=None):
                     (hitname, "h", "mult", ""),
                     (hitname, "h", "integral", ""),
                     (hitname, "h", "sumadc", ""),
-                    (hitname, "h", "truth", "e"),
-                    (hitname, "h", "truth", "nelec"),
                     ("meta", "run", "", ""),
                     ("meta", "subrun", "", ""),
                     ("meta", "evt", "", ""),
                     ("cryostat", "", "", ""),
-                    ("t0", "", "", ""),
+                    ("t0PFP", "", "", ""),
+                    ("t0CRTHit", "", "", ""),
                     #("whicht0", "", "", ""),
                     ("dir", "y", "", ""),
                     ("hit_min_time_p2_tpcE", "", "", ""),
                     ("hit_max_time_p2_tpcE", "", "", ""),
                     ("hit_min_time_p2_tpcW", "", "", ""),
                     ("hit_max_time_p2_tpcW", "", "", ""),
-                    ("truth", "michel", "genE", ""),
-                   ]
+                   ] + ([
+                    ("true_pdg", "", "", ""),
+                    ("true_wallin", "", "", ""),
+                    ("true_end_dist", "", "", ""),
+                    (hitname, "h", "truth", "e"),
+                    (hitname, "h", "truth", "nelec"),
+                    ("truth", "michel", "genE", "")] if SAVEMC else [])
                   ].copy()
 
     # Simplify column names
-    outdf.columns = ["time", "tpcE", "channel", "wire", "true_pdg", "true_wallin", "true_end_dist", "dqdx_nocorr", "pitch", "rr", "p_x", "p_y", "p_z", "dir_x", "dir_y", "dir_z", "width", "start", "end", "mult", "integral", "sumadc", "trueh_e", "trueh_nelec", "run", "subrun", "evt", "cryostat", "pandora_t0", 
-    #"whicht0",
-     "tdir_y", "mint_tpcE", "maxt_tpcE", "mint_tpcW", "maxt_tpcW", "michelE"]
+    outdf.columns = ["time", "tpcE", "channel", "wire", "dqdx_nocorr", "pitch", "rr", "p_x", "p_y", "p_z", "dir_x", "dir_y", "dir_z", "width", "start", "end", "mult", "integral", "sumadc", "run", "subrun", "evt", "cryostat", "pandora_t0", "crt_t0", 
+     "tdir_y", "mint_tpcE", "maxt_tpcE", "mint_tpcW", "maxt_tpcW"] + (
+     ["true_pdg", "true_wallin", "true_end_dist", "trueh_e", "trueh_nelec", "michelE"] if SAVEMC else [])
     
     # Save information on PFP daughters
     if raydf is not None:
@@ -154,8 +150,12 @@ def reduce_df(df, raydf=None, truehdf=None, othrdf=None):
     return outdf
 
 def main(output, inputs):
-    ntuples = NTupleGlob(inputs, branches.trkbranches + truebranches + plane2branches + ray_branches + truehitbranches) # + othrtrkbranches)
-    df = ntuples.dataframe(nproc="auto", f=reduce_df)
+    b = plane2branches + branches.trkbranches + ["t0CRTHit"]
+    if SAVEMC:
+        b += truebranches + truehitbranches
+
+    ntuples = NTupleGlob(inputs, b)
+    df = ntuples.dataframe(nproc="auto", f=reduce_df, concat="left")
     df.to_hdf(output, key="df", mode="w")
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ trkbranches = [
     "meta.evt",
     "meta.iproc",
     "meta.time",
-    "t0",
+    "t0PFP",
     "id",
     "clear_cosmic_muon",
     "start.x",

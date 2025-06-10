@@ -2,6 +2,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import sys
+import os
 import datetime as dt
 from lib.ntuple_glob import NTupleGlob
 from lib import branches
@@ -12,8 +13,7 @@ import pandas as pd
 from lib.constants import *
 
 # Script parameters
-NCHUNK = 10
-PLANE = 0
+NCHUNK = 1
 SPNAME = "sp"
 SAVEMC = False
 
@@ -23,12 +23,10 @@ plane2branches = [
 if SAVEMC:
     plane2branches.append("h.channel")
 
-plane2branches = ["hits%i.%s" % (PLANE, s) for s in plane2branches]
 
 truehitbranches = [
     "channel", "ndep", "nelec", "e", "pitch",
 ]
-truehitbranches = ["truth.p.truehits%i.%s" % (PLANE, s) for s in truehitbranches]
 
 def isTPCE(df):
     return df.tpc <= 1
@@ -37,7 +35,7 @@ def reduce_df(df, truedf=None):
     if len(df) == 0: # Ignore empty df's 
         return None
 
-    select_track = ((df.selected == 1) | (df.selected == 2)) & (df.length > 25)
+    select_track = ((df.selected == 1) | (df.selected == 2)) & (df.length > 25) & (~np.isnan(df.t0PFP) | ~np.isnan(df.t0CRTHit))
 
     # Select anode + cathode crossing tracks
     # select_track = (df.selected == 1) # & (df.whicht0 == 0)
@@ -50,7 +48,7 @@ def reduce_df(df, truedf=None):
     # Ignore hits that are not the first in a snippet on a track.
     # In the aggregation function (median) below, these entries will
     # be skipped in the computation
-    # df.loc[hits.i_snippet > 0, ("h", "sumadc", "", "")] = np.nan 
+    df.loc[hits.i_snippet > 0, ("h", "sumadc", "", "")] = np.nan 
 
     # Add in truth if we can
     if truedf is not None:
@@ -116,7 +114,8 @@ def reduce_df(df, truedf=None):
     outdf["tpcW"] = (~outdf.tpcE) & (df.groupby(["entry", "chunk"]).tpcE.nunique() == 1)
 
     # Save T0
-    outdf["pandora_t0"] = df.groupby(["entry", "chunk"]).t0.first()
+    outdf["pandora_t0"] = df.groupby(["entry", "chunk"]).t0PFP.first()
+    outdf["crt_t0"] = df.groupby(["entry", "chunk"]).t0CRTHit.first()
     outdf["hit_max_time_p2_tpcE"] = df.groupby(["entry", "chunk"]).hit_max_time_p2_tpcE.first()
     outdf["hit_max_time_p2_tpcW"] = df.groupby(["entry", "chunk"]).hit_max_time_p2_tpcW.first()
 
@@ -132,17 +131,29 @@ def reduce_df(df, truedf=None):
 
 
 def main(output, inputs):
-    b = branches.trkbranches + plane2branches
+    b = plane2branches + branches.trkbranches + ["t0CRTHit"]
     if SAVEMC:
         b += truehitbranches
 
     ntuples = NTupleGlob(inputs, b)
-    df = ntuples.dataframe(nproc=5, f=reduce_df)
+    df = ntuples.dataframe(nproc="auto", f=reduce_df, concat="left")
     df.to_hdf(output, key="df", mode="w")
 
 if __name__ == "__main__":
-    printhelp = len(sys.argv) < 3 or sys.argv[1] == "-h"
+    # be nice
+    os.nice(10) 
+
+    printhelp = len(sys.argv) < 4 or sys.argv[1] == "-h"
+    if not printhelp:
+        try:
+            PLANE = int(sys.argv[1])
+        except:
+            printhelp = True
+
     if printhelp:
-        print("Usage: python make_etau_df.py [output.df] [inputs.root,]")
+        print("Usage: python make_yz_df.py [PLANE] [output.df] [inputs.root,]")
     else:
-        main(sys.argv[1], sys.argv[2:])
+        truehitbranches = ["truth.p.truehits%i.%s" % (PLANE, s) for s in truehitbranches]
+        plane2branches = ["hits%i.%s" % (PLANE, s) for s in plane2branches]
+
+        main(sys.argv[2], sys.argv[3:])
