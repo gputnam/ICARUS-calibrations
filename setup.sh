@@ -1,5 +1,6 @@
-source /cvmfs/icarus.opensciencegrid.org/products/icarus/setup_icarus.sh
-setup python v3_9_2
-setup hdf5 v1_12_0a -q e20:prof
+source /cvmfs/larsoft.opensciencegrid.org/spack-v0.22.0-fermi/setup-env.sh
+spack load hdf5@1.14.3%gcc@12.2.0 arch=linux-almalinux9-x86_64_v3
+spack load xrootd@5.6.9%gcc@12.2.0
+
 . env/bin/activate
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/xrootd-5.5.1/build/lib64
+
